@@ -15,6 +15,7 @@
   vulkan-loader,
   wayland,
   libva,
+  addDriverRunpath,
   version,
   hash,
 }:
@@ -58,6 +59,8 @@ stdenv.mkDerivation {
   ];
 
   runtimeDependencies = map lib.getLib runtimeLibs;
+
+  appendRunpaths = [ "${addDriverRunpath.driverLink}/lib" ];
 
   dontConfigure = true;
   dontBuild = true;

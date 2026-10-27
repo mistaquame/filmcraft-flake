@@ -23,6 +23,7 @@
             inherit version;
             hash = hashByArch.${system} or (throw "Unsupported system: ${system}");
             libva = pkgs.libva;
+            addDriverRunpath = pkgs.addDriverRunpath;
           };
         in
         {
