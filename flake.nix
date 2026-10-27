@@ -33,7 +33,7 @@
       apps = forAllSystems (
         system:
         let
-          pkg = self.packages.${system}.default;
+          pkg = self.packages.${system};
         in
         {
           default = {
