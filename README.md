@@ -59,17 +59,16 @@ nix develop github:mistaquame/filmcraft-flake
 | Platform | Status |
 |----------|--------|
 | `x86_64-linux` | ✅ |
-| `aarch64-linux` | ✅ |
 
 ## Auto-Update
 
 This flake is automatically updated via GitHub Actions when a new [FilmCraft release](https://github.com/storytold/filmcraft/releases) is published. The workflow:
 
 1. Detects new release via scheduled check (every 6 hours)
-2. Fetches `x86_64` and `aarch64` Linux tarballs
-3. Computes SHA256 hashes
-4. Opens a PR with updated `flake.nix` and `flake.lock`
-5. Merges automatically after CI passes
+2. Fetches the `x86_64` Linux tarball
+3. Computes its SHA256 hash
+4. Updates `flake.nix` and `flake.lock`
+5. Builds the package to verify before pushing
 
 ## License
 

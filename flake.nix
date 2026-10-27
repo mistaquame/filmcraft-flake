@@ -10,13 +10,11 @@
     let
       systems = [
         "x86_64-linux"
-        "aarch64-linux"
       ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
       filmcraftVersion = "0.13.0";
       sha256ByArch = {
         "x86_64-linux" = "40e9d685fb3ed1b0a21c9c02211f1a8499e09a47c551244ce7ee80f2584d3a9b";
-        "aarch64-linux" = "e55061da7f46dd1465379ac071eb854993722f4ece87ef1a8b70b265927b6894";
       };
       packageFor =
         system:

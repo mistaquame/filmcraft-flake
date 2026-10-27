@@ -38,34 +38,28 @@ jobs:
             echo "version=$latest" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Fetch tarball hashes
+      - name: Fetch tarball hash (x86_64 only)
         if: steps.upstream.outputs.changed == 'true'
         id: hashes
         run: |
           version="${{ steps.upstream.outputs.version }}"
           curl -sL -o /tmp/x86_64.tar.gz \
             "https://github.com/storytold/filmcraft/releases/download/v${version}/filmcraft-${version}-linux-x86_64.tar.gz"
-          curl -sL -o /tmp/aarch64.tar.gz \
-            "https://github.com/storytold/filmcraft/releases/download/v${version}/filmcraft-${version}-linux-aarch64.tar.gz"
           x86_64_hash=$(sha256sum /tmp/x86_64.tar.gz | awk '{print $1}')
-          aarch64_hash=$(sha256sum /tmp/aarch64.tar.gz | awk '{print $1}')
           echo "x86_64=$x86_64_hash" >> "$GITHUB_OUTPUT"
-          echo "aarch64=$aarch64_hash" >> "$GITHUB_OUTPUT"
 
       - name: Update flake.nix
         if: steps.upstream.outputs.changed == 'true'
         run: |
           version="${{ steps.upstream.outputs.version }}"
           x86_64_hash="${{ steps.hashes.outputs.x86_64 }}"
-          aarch64_hash="${{ steps.hashes.outputs.aarch64 }}"
-          python3 - "$version" "$x86_64_hash" "$aarch64_hash" <<'PY'
+          python3 - "$version" "$x86_64_hash" <<'PY'
           import re, sys
-          version, x86, aarch = sys.argv[1], sys.argv[2], sys.argv[3]
+          version, x86 = sys.argv[1], sys.argv[2]
           with open("flake.nix") as f:
               content = f.read()
           content = re.sub(r'filmcraftVersion = "[^"]+"', f'filmcraftVersion = "{version}"', content)
           content = re.sub(r'"x86_64-linux" = "[0-9a-f]+"', f'"x86_64-linux" = "{x86}"', content)
-          content = re.sub(r'"aarch64-linux" = "[0-9a-f]+"', f'"aarch64-linux" = "{aarch}"', content)
           with open("flake.nix", "w") as f:
               f.write(content)
           print("Updated flake.nix")
@@ -76,11 +70,10 @@ jobs:
         run: |
           nix flake lock --update nixpkgs
 
-      - name: Build packages
+      - name: Build package (x86_64 only)
         if: steps.upstream.outputs.changed == 'true'
         run: |
           nix build .#defaultPackage.x86_64-linux
-          nix build .#defaultPackage.aarch64-linux
 
       - name: Commit and push
         if: steps.upstream.outputs.changed == 'true'
