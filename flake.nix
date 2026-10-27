@@ -20,7 +20,7 @@
         system:
         let
           pkgs = import nixpkgs { inherit system; };
-          src = import ./package.nix { inherit (pkgs) lib stdenv fetchurl autoPatchelfHook glibc; alsaLib = pkgs.alsa-lib; libgcc = pkgs.gcc-unwrapped.libgcc; wayland = pkgs.wayland; libxkbcommon = pkgs.libxkbcommon; libx11 = pkgs.libx11; libxext = pkgs.libxext; };
+          src = import ./package.nix { inherit (pkgs) lib stdenv fetchurl autoPatchelfHook makeWrapper glibc; alsaLib = pkgs.alsa-lib; libgcc = pkgs.gcc-unwrapped.libgcc; wayland = pkgs.wayland; libxkbcommon = pkgs.libxkbcommon; libx11 = pkgs.libx11; libxext = pkgs.libxext; };
         in
         src {
           version = filmcraftVersion;
