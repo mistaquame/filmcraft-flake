@@ -20,7 +20,7 @@
         system:
         let
           pkgs = import nixpkgs { inherit system; };
-          src = import ./package.nix { inherit (pkgs) lib stdenv fetchurl; };
+          src = import ./package.nix { inherit (pkgs) lib stdenv fetchurl autoPatchelfHook glibc; alsaLib = pkgs.alsa-lib; libgcc = pkgs.gcc-unwrapped.libgcc; };
         in
         src {
           version = filmcraftVersion;

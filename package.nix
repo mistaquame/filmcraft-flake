@@ -1,4 +1,4 @@
-{ stdenv, lib, fetchurl }:
+{ stdenv, lib, fetchurl, autoPatchelfHook, glibc, alsaLib, libgcc }:
 
 { version
 , sha256
@@ -13,6 +13,8 @@ stdenv.mkDerivation {
     inherit sha256;
   };
   sourceRoot = "filmcraft-${version}-linux-${arch}";
+  nativeBuildInputs = [ autoPatchelfHook ];
+  buildInputs = [ glibc alsaLib libgcc ];
   dontBuild = true;
   dontConfigure = true;
   installPhase = ''
@@ -22,11 +24,12 @@ stdenv.mkDerivation {
     cp -r share $out/share
     runHook postInstall
   '';
+  autoPatchelfAllowlist = [ "bin/filmcraft" "bin/filmcraft-cli" ];
   meta = with lib; {
     description = "An open-source, nonlinear video editor written in pure Rust";
     homepage = "https://github.com/storytold/filmcraft";
     license = licenses.mit;
     mainProgram = "filmcraft";
-    platforms = [ "x86_64-linux" "aarch64-linux" ];
+    platforms = [ "x86_64-linux" ];
   };
 }
