@@ -7,95 +7,50 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-install-action@v9
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
 
-      - name: Set up Nix cache
-        uses: DeterminateSystems/magic-nix-cache@v8
-
-      - name: Check for new upstream release
-        id: upstream
-        run: |
-          latest=$(curl -s https://api.github.com/repos/storytold/filmcraft/releases/latest | grep '"tag_name"' | sed 's/.*"tag_name": *"//;s/".*//')
-          echo "latest upstream tag: $latest"
-          current=$(grep -oP 'filmcraftVersion = "\K[^"]+' flake.nix)
-          echo "current flake version: $current"
-          if [ "$latest" = "$current" ]; then
-            echo "up to date"
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "new release available: $latest"
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "version=$latest" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Fetch tarball hash (x86_64 only)
-        if: steps.upstream.outputs.changed == 'true'
-        id: hashes
-        run: |
-          version="${{ steps.upstream.outputs.version }}"
-          curl -sL -o /tmp/x86_64.tar.gz \
-            "https://github.com/storytold/filmcraft/releases/download/v${version}/filmcraft-${version}-linux-x86_64.tar.gz"
-          x86_64_hash=$(sha256sum /tmp/x86_64.tar.gz | awk '{print $1}')
-          echo "x86_64=$x86_64_hash" >> "$GITHUB_OUTPUT"
-
-      - name: Update flake.nix
-        if: steps.upstream.outputs.changed == 'true'
-        run: |
-          version="${{ steps.upstream.outputs.version }}"
-          x86_64_hash="${{ steps.hashes.outputs.x86_64 }}"
-          python3 - "$version" "$x86_64_hash" <<'PY'
-          import re, sys
-          version, x86 = sys.argv[1], sys.argv[2]
-          with open("flake.nix") as f:
-              content = f.read()
-          content = re.sub(r'filmcraftVersion = "[^"]+"', f'filmcraftVersion = "{version}"', content)
-          content = re.sub(r'"x86_64-linux" = "[0-9a-f]+"', f'"x86_64-linux" = "{x86}"', content)
-          with open("flake.nix", "w") as f:
-              f.write(content)
-          print("Updated flake.nix")
-          PY
-
-      - name: Update flake.lock
-        if: steps.upstream.outputs.changed == 'true'
-        run: |
-          nix flake lock --update nixpkgs
-
-      - name: Build package (x86_64 only)
-        if: steps.upstream.outputs.changed == 'true'
-        run: |
-          nix build .#defaultPackage.x86_64-linux
-
-      - name: Commit and push
-        if: steps.upstream.outputs.changed == 'true'
-        run: |
-          version="${{ steps.upstream.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add flake.nix flake.lock
-          git commit -m "filmcraft: update to v${version}" || echo "nothing to commit"
-          git push origin HEAD:main
-
-      - name: Create PR if on non-main branch
-        if: steps.upstream.outputs.changed == 'true' && github.ref != 'refs/heads/main'
-        run: |
-          version="${{ steps.upstream.outputs.version }}"
-          git checkout -b "auto-update/filmcraft-v${version}"
-          git push origin "auto-update/filmcraft-v${version}"
-          gh pr create \
-            --base main \
-            --head "auto-update/filmcraft-v${version}" \
-            --title "filmcraft: update to v${version}" \
-            --body "Automated update to upstream FilmCraft v${version}." \
-            --label "auto-update"
+      - name: Check upstream, update flake.nix, build, push
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Upstream tags look like "v0.13.0"; the flake stores "0.13.0".
+          latest=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/repos/storytold/filmcraft/releases/latest \
+            | jq -r .tag_name | sed 's/^v//')
+          current=$(grep -oP '^\s*version = "\K[^"]+' flake.nix)
+          echo "upstream: $latest, flake: $current"
+
+          if [ -z "$latest" ] || [ "$latest" = "null" ]; then
+            echo "could not determine latest release" >&2; exit 1
+          fi
+          if [ "$latest" = "$current" ]; then
+            echo "up to date"; exit 0
+          fi
+
+          url="https://github.com/storytold/filmcraft/releases/download/v${latest}/filmcraft-${latest}-linux-x86_64.tar.gz"
+          hash=$(nix store prefetch-file --json "$url" | jq -r .hash)   # SRI: sha256-...
+          echo "new hash: $hash"
+
+          sed -i -E "s|^(\s*version = \")[^\"]+|\1${latest}|" flake.nix
+          sed -i -E "s|(\"x86_64-linux\" = \")[^\"]+|\1${hash}|" flake.nix
+
+          # Only push if the package actually builds.
+          nix build .#default --no-link
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add flake.nix
+          git commit -m "filmcraft: update to v${latest}"
+          git push origin HEAD:main
