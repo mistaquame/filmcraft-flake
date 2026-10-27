@@ -1,4 +1,4 @@
-{ stdenv, lib, fetchurl, autoPatchelfHook, glibc, alsaLib, libgcc }:
+{ stdenv, lib, fetchurl, autoPatchelfHook, glibc, alsaLib, libgcc, wayland, libxkbcommon, libx11, libxext }:
 
 { version
 , sha256
@@ -14,7 +14,7 @@ stdenv.mkDerivation {
   };
   sourceRoot = "filmcraft-${version}-linux-${arch}";
   nativeBuildInputs = [ autoPatchelfHook ];
-  buildInputs = [ glibc alsaLib libgcc ];
+  buildInputs = [ glibc alsaLib libgcc wayland libxkbcommon libx11 libxext ];
   dontBuild = true;
   dontConfigure = true;
   installPhase = ''
