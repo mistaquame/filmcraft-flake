@@ -9,9 +9,9 @@
       systems = [ "x86_64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
 
-      version = "0.14.0";
+      version = "0.15.0";
       hashByArch = {
-        "x86_64-linux" = "sha256-0qohPMCKvSHgWrURp4zDjxV8ryImmS8/yKXgSWo/fn0=";
+        "x86_64-linux" = "sha256-IrEGtMpilNmz6aSvQLQKZToYl0NzZIBQRqAd26pLIsE=";
       };
     in
     {
